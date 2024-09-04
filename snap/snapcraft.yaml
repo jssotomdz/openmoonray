@@ -1,0 +1,40 @@
+name: openmoonray
+base: core24
+version: '1.6.0.0' # will need to find a way to parse this
+summary: MoonRay is DreamWorks’ open-source, state-of-the-art production MCRT renderer. 
+description: |
+  MoonRay is DreamWorks’ open-source, award-winning, state-of-the-art production MCRT renderer.
+  MoonRay was developed at DreamWorks and is in continuous active development and includes an extensive library of production-tested, physically based materials, a USD Hydra render delegate, multi-machine and cloud rendering via the Arras distributed computation framework.
+
+grade: stable
+confinement: strict
+
+package-repositories:
+ - type: apt
+   ppa: deadsnakes/ppa
+
+parts:
+  dependencies:
+    plugin: cmake
+    source: ./building/Rocky9
+    override-pull: |
+      craftctl default
+      git apply ${CRAFT_PROJECT_DIR}/snap/patches/gcc-11.patch
+      sed -i "s#PATCH_COMMAND patch IlmBase/Half/CMakeLists.txt \${THIS_DIR}/../Imath_include_paths.patch#PATCH_COMMAND patch IlmBase/Half/CMakeLists.txt ${CRAFT_PROJECT_DIR}/building/Imath_include_paths.patch#g" ${CRAFT_PART_SRC}/CMakeLists.txt
+    build-packages:
+      - python3.11
+      - libglu1-mesa-dev
+      - freeglut3-dev
+      - mesa-common-dev
+      - libboost-all-dev
+      - libtbb-dev
+      - pybind11-dev
+      - libtiff-dev
+      - libjpeg-dev
+      - git
+      - gcc-11
+      - g++-11
+    # stage-packages:
+      #- libpython3.12t64
+      #- libboost-python1.83.0
+      #- libtbb12
