@@ -9,32 +9,74 @@ description: |
 grade: stable
 confinement: strict
 
-package-repositories:
- - type: apt
-   ppa: deadsnakes/ppa
-
 parts:
+  libtbb-dev:
+    source: http://ftp.us.debian.org/debian/pool/main/t/tbb/libtbb-dev_2020.3-1_amd64.deb
+    source-type: deb
+    plugin: dump
+    
+  libtbb2:
+    source: http://ftp.us.debian.org/debian/pool/main/t/tbb/libtbb2_2020.3-1_amd64.deb
+    source-type: deb
+    plugin: dump
+    
   dependencies:
+    after: [ libtbb-dev, libtbb2 ]
     plugin: cmake
     source: ./building/Rocky9
     override-pull: |
       craftctl default
-      git apply ${CRAFT_PROJECT_DIR}/snap/patches/gcc-11.patch
+      git apply ${CRAFT_PROJECT_DIR}/snap/patches/CMakeLists.patch
       sed -i "s#PATCH_COMMAND patch IlmBase/Half/CMakeLists.txt \${THIS_DIR}/../Imath_include_paths.patch#PATCH_COMMAND patch IlmBase/Half/CMakeLists.txt ${CRAFT_PROJECT_DIR}/building/Imath_include_paths.patch#g" ${CRAFT_PART_SRC}/CMakeLists.txt
+      sed -i "s#-DTBB_ROOT_DIR=/usr#-DTBB_ROOT_DIR=${CRAFT_STAGE}/usr#g" ${CRAFT_PART_SRC}/CMakeLists.txt
+      sed -i "s#-DTBB_LIBRARIES=/usr/lib#-DTBB_LIBRARIES=${CRAFT_STAGE}/usr/lib#g" ${CRAFT_PART_SRC}/CMakeLists.txt
+      sed -i "s#-DTBB_INCLUDE_DIRS=/usr/include ..#-DTBB_INCLUDE_DIRS=${CRAFT_STAGE}/usr/include ..#g" ${CRAFT_PART_SRC}/CMakeLists.txt
     build-packages:
-      - python3.11
       - libglu1-mesa-dev
       - freeglut3-dev
       - mesa-common-dev
-      - libboost-all-dev
-      - libtbb-dev
       - pybind11-dev
       - libtiff-dev
       - libjpeg-dev
+      - libtbb-dev
       - git
       - gcc-11
       - g++-11
-    # stage-packages:
-      #- libpython3.12t64
-      #- libboost-python1.83.0
-      #- libtbb12
+      - libboost-python1.74-dev
+      - libboost1.74-all-dev
+      - python3-jinja2
+    override-build: |
+      # cd $CRAFT_PART_BUILD
+      # cmake $CRAFT_PART_SRC
+      # cmake --build . --
+      # mkdir -p $CRAFT_PART_INSTALL/dependencies
+      # cp -r $CRAFT_PART_BUILD/* $CRAFT_PART_INSTALL/dependencies
+    stage-packages:
+      - libpython3.12t64
+      - libboost-python1.74.0
+      - libxcb1
+      - libxdmcp6
+      - libxau6
+      - libx11-6
+      - libglvnd0
+      - libglx0
+      - libgl1
+      - libwebpdemux2
+      - libwebp7
+      - libtiff6
+      - libsharpyuv0
+      - libjpeg-turbo8
+      - libjbig0
+      - libdeflate0
+      - liblerc4
+      
+  moonray:
+    after: [ dependencies ]
+    plugin: cmake
+    source: .
+    override-build: |
+      cd $CRAFT_PART_BUILD
+      cmake $CRAFT_PART_SRC -DPYTHON_EXECUTABLE=python3 -DBOOST_PYTHON_COMPONENT_NAME=python312 -DABI_VERSION=0
+      cmake --build .
+      mkdir $CRAFT_PART_INSTALL/installs/openmoonray
+      cmake --install $CRAFT_PART_BUILD --prefix $CRAFT_PART_SRC/installs/openmoonray
